@@ -321,11 +321,16 @@ export default function App() {
         const isMasterAdmin = session.user.email === 'adminnovo@gmail.com';
         const role = (session.user.user_metadata?.admin_category || isMasterAdmin) ? 'admin' : 'user';
         const category = session.user.user_metadata?.admin_category || null;
+        
+        let displayName = session.user.user_metadata?.display_name || 'Usuário';
+        if (isMasterAdmin) {
+          displayName = 'Admin';
+        }
 
         userService.upsertProfile({
           id: session.user.id,
           email: session.user.email || '',
-          display_name: session.user.user_metadata?.display_name || 'Usuário',
+          display_name: displayName,
           admin_category: category,
           role: role
         }).then(() => {
@@ -344,12 +349,18 @@ export default function App() {
         fetchProfiles();
 
         // Auto-save current user profile
+        const isMasterAdmin = session.user.email === 'adminnovo@gmail.com';
+        let displayName = session.user.user_metadata?.display_name || 'Usuário';
+        if (isMasterAdmin) {
+          displayName = 'Admin';
+        }
+
         userService.upsertProfile({
           id: session.user.id,
           email: session.user.email || '',
-          display_name: session.user.user_metadata?.display_name || 'Usuário',
+          display_name: displayName,
           admin_category: session.user.user_metadata?.admin_category || null,
-          role: session.user.user_metadata?.admin_category ? 'admin' : 'user'
+          role: (session.user.user_metadata?.admin_category || isMasterAdmin) ? 'admin' : 'user'
         });
 
         setView('home');
@@ -685,22 +696,9 @@ export default function App() {
               disabled={authLoading}
               className="w-full btn-primary h-9 sm:h-11 flex items-center justify-center gap-2"
             >
-              {authLoading ? <Loader2 className="animate-spin w-4 h-4" /> : (authMode === 'login' ? 'Entrar' : 'Criar Conta')}
+              {authLoading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Entrar'}
             </button>
           </form>
-
-          <p className="mt-4 text-center text-[11px] sm:text-sm text-gray-500">
-            {authMode === 'login' ? 'Não tem conta?' : 'Já possui conta?'}
-            <button 
-              onClick={() => {
-                setAuthMode(authMode === 'login' ? 'signup' : 'login');
-                setAuthError(null);
-              }}
-              className="ml-1 text-blue-600 font-bold hover:underline"
-            >
-              {authMode === 'login' ? 'Cadastre-se' : 'Entrar'}
-            </button>
-          </p>
         </motion.div>
       </div>
     );
@@ -762,7 +760,7 @@ export default function App() {
         <div className="p-4 border-t border-slate-50 shrink-0">
           <div className="bg-slate-50 p-3 rounded-2xl mb-3 hidden lg:block">
             <p className="text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Usuário Logado</p>
-            <p className="text-xs font-bold text-slate-700 truncate">{user.user_metadata?.display_name || user.email || 'Usuário'}</p>
+            <p className="text-xs font-bold text-slate-700 truncate">{currentUserProfile?.display_name || user.user_metadata?.display_name || user.email || 'Usuário'}</p>
             <p className="text-[9px] font-black text-blue-500 uppercase mt-1">
               {isUserAdmin ? `Admin ${effectiveAdminCategory || ''}` : 'Visitador'}
             </p>
@@ -1318,7 +1316,7 @@ export default function App() {
                         </div>
                         <div>
                           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome</p>
-                          <p className="text-xl font-black">{user?.user_metadata?.display_name || 'Admin'}</p>
+                          <p className="text-xl font-black">{currentUserProfile?.display_name || user?.user_metadata?.display_name || 'Admin'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">E-mail</p>
