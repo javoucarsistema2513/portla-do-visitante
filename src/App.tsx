@@ -1132,20 +1132,6 @@ export default function App() {
                       </div>
 
                       <div className="space-y-1 sm:space-y-2">
-                        <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Algum pedido de Oração?</label>
-                        <div className="relative">
-                          <FileText className="absolute left-4 top-4 text-slate-300 w-4 h-4 sm:w-5 sm:h-5" />
-                          <textarea 
-                            rows={3}
-                            value={formData.prayerRequest}
-                            onChange={(e) => setFormData({...formData, prayerRequest: e.target.value})}
-                            placeholder="Escreva aqui o pedido de oração se houver..."
-                            className="input-field pl-10 sm:pl-12 pt-3 sm:pt-4 resize-none text-sm sm:text-base"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1 sm:space-y-2">
                         <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
                         <div className="relative">
                           <MapPin className="absolute left-4 top-4 text-slate-300 w-4 h-4 sm:w-5 sm:h-5" />
@@ -1155,6 +1141,20 @@ export default function App() {
                             value={formData.address}
                             onChange={(e) => setFormData({...formData, address: e.target.value})}
                             placeholder="Rua, Número, Bairro e Cidade"
+                            className="input-field pl-10 sm:pl-12 pt-3 sm:pt-4 resize-none text-sm sm:text-base"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 sm:space-y-2">
+                        <label className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Algum pedido de Oração?</label>
+                        <div className="relative">
+                          <FileText className="absolute left-4 top-4 text-slate-300 w-4 h-4 sm:w-5 sm:h-5" />
+                          <textarea 
+                            rows={3}
+                            value={formData.prayerRequest}
+                            onChange={(e) => setFormData({...formData, prayerRequest: e.target.value})}
+                            placeholder="Escreva aqui o pedido de oração se houver..."
                             className="input-field pl-10 sm:pl-12 pt-3 sm:pt-4 resize-none text-sm sm:text-base"
                           />
                         </div>
