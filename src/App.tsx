@@ -320,9 +320,10 @@ export default function App() {
     setProfilesError(null);
     try {
       const data = await userService.getProfiles();
-      setProfiles(data);
+      const safeData = data || [];
+      setProfiles(safeData);
       if (user) {
-        const myProfile = data.find(p => p.id === user.id);
+        const myProfile = safeData.find(p => p.id === user.id);
         if (myProfile) setCurrentUserProfile(myProfile);
       }
     } catch (err: any) {
@@ -452,7 +453,7 @@ export default function App() {
 
   useEffect(() => {
     // Check active sessions and sets up the observer
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
@@ -466,24 +467,28 @@ export default function App() {
         
         let displayName = session.user.user_metadata?.display_name || 'Usuário';
         if (isMasterAdmin) {
-          displayName = 'Admin';
+          displayName = 'Admin Master';
         }
 
-        userService.upsertProfile({
-          id: session.user.id,
-          email: session.user.email || '',
-          display_name: displayName,
-          admin_category: category,
-          role: role
-        }).then(() => {
+        try {
+          await userService.upsertProfile({
+            id: session.user.id,
+            email: session.user.email || '',
+            display_name: displayName,
+            admin_category: category,
+            role: role
+          });
           fetchProfiles();
-        }).catch(err => console.error('Erro ao sincronizar perfil:', err));
+        } catch (err) {
+          console.error('Erro silencioso ao sincronizar perfil:', err);
+          // Não joga erro para não travar a aplicação no cliente
+        }
 
         setView('home');
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         visitorService.testConnection();
@@ -494,16 +499,21 @@ export default function App() {
         const isMasterAdmin = session.user.email === 'adminnovo@gmail.com';
         let displayName = session.user.user_metadata?.display_name || 'Usuário';
         if (isMasterAdmin) {
-          displayName = 'Admin';
+          displayName = 'Admin Master';
         }
 
-        userService.upsertProfile({
-          id: session.user.id,
-          email: session.user.email || '',
-          display_name: displayName,
-          admin_category: session.user.user_metadata?.admin_category || null,
-          role: (session.user.user_metadata?.admin_category || isMasterAdmin) ? 'admin' : 'user'
-        });
+        try {
+          await userService.upsertProfile({
+            id: session.user.id,
+            email: session.user.email || '',
+            display_name: displayName,
+            admin_category: session.user.user_metadata?.admin_category || null,
+            role: (session.user.user_metadata?.admin_category || isMasterAdmin) ? 'admin' : 'user'
+          });
+          fetchProfiles();
+        } catch (err) {
+          console.error('Erro silencioso ao auto-salvar perfil:', err);
+        }
 
         setView('home');
       }

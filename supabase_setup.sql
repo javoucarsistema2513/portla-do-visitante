@@ -1,7 +1,18 @@
--- SCRIPT COMPLETO PARA O SUPABASE (SQL EDITOR)
--- Copie e cole todo este código no SQL Editor do seu projeto Supabase e clique em 'Run'
+-- SCRIPT DEFINITIVO PARA O SUPABASE (SQL EDITOR)
+-- ATENÇÃO: NÃO use // para comentários em SQL. Use apenas --
+-- Este script configura as tabelas e permissões necessárias.
 
--- 1. Criar a tabela se não existir (ou atualizar se houver novos campos)
+-- 1. Criar a tabela de perfis (profiles) se não existir
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  display_name TEXT,
+  admin_category TEXT CHECK (admin_category IN ('homens', 'mulheres', 'jovens', 'todas')),
+  role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Criar a tabela de visitantes (visitors) se não existir
 CREATE TABLE IF NOT EXISTS public.visitors (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -20,57 +31,49 @@ CREATE TABLE IF NOT EXISTS public.visitors (
   created_by UUID REFERENCES auth.users(id) NOT NULL
 );
 
--- 2. Garantir que todas as colunas existem (caso a tabela já tenha sido criada antes)
+-- 3. Garantir colunas necessárias (migração segura)
 DO $$ 
 BEGIN 
-  -- Lista de colunas para verificar/adicionar
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='invited_by') THEN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='visitors' AND column_name='invited_by') THEN
     ALTER TABLE public.visitors ADD COLUMN invited_by TEXT;
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='age') THEN
-    ALTER TABLE public.visitors ADD COLUMN age INTEGER;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='visitors' AND column_name='address') THEN
+    ALTER TABLE public.visitors ADD COLUMN address TEXT;
   END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='gender') THEN
-    ALTER TABLE public.visitors ADD COLUMN gender TEXT;
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='birth_date') THEN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='visitors' AND column_name='birth_date') THEN
     ALTER TABLE public.visitors ADD COLUMN birth_date DATE;
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='participates_in_cell') THEN
-    ALTER TABLE public.visitors ADD COLUMN participates_in_cell TEXT;
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='cell_leader') THEN
-    ALTER TABLE public.visitors ADD COLUMN cell_leader TEXT;
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='category') THEN
-    ALTER TABLE public.visitors ADD COLUMN category TEXT;
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='is_married_or_lives_together') THEN
-    ALTER TABLE public.visitors ADD COLUMN is_married_or_lives_together TEXT;
-  END IF;
-
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='visitors' AND column_name='prayer_request') THEN
-    ALTER TABLE public.visitors ADD COLUMN prayer_request TEXT;
   END IF;
 END $$;
 
--- 3. Habilitar Segurança (RLS)
+-- 4. Habilitar RLS
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.visitors ENABLE ROW LEVEL SECURITY;
 
--- 4. Criar as Políticas de Acesso
-DROP POLICY IF EXISTS "Permitir leitura para usuários autenticados" ON visitors;
-DROP POLICY IF EXISTS "Permitir inserção para usuários autenticados" ON visitors;
-DROP POLICY IF EXISTS "Permitir deleção para quem criou" ON visitors;
-DROP POLICY IF EXISTS "Permitir atualização para quem criou" ON visitors;
+-- 5. Limpar e Recriar Políticas para PROFILES
+DROP POLICY IF EXISTS "Permitir leitura de perfis para usuários autenticados" ON public.profiles;
+DROP POLICY IF EXISTS "Usuários podem gerenciar seus próprios perfis" ON public.profiles;
+DROP POLICY IF EXISTS "Master admins podem gerenciar tudo em perfis" ON public.profiles;
 
-CREATE POLICY "Permitir leitura para usuários autenticados" ON visitors FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Permitir inserção para usuários autenticados" ON visitors FOR INSERT TO authenticated WITH CHECK (auth.uid() = created_by);
-CREATE POLICY "Permitir deleção para quem criou" ON visitors FOR DELETE TO authenticated USING (auth.uid() = created_by);
-CREATE POLICY "Permitir atualização para quem criou" ON visitors FOR UPDATE TO authenticated USING (auth.uid() = created_by) WITH CHECK (auth.uid() = created_by);
+CREATE POLICY "Equipe pode ver perfis" ON public.profiles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Gerenciar conta própria" ON public.profiles FOR ALL TO authenticated USING (auth.uid() = id);
+CREATE POLICY "Master admin total" ON public.profiles FOR ALL TO authenticated USING (
+  auth.jwt() ->> 'email' = 'adminnovo@gmail.com'
+) WITH CHECK (
+  auth.jwt() ->> 'email' = 'adminnovo@gmail.com'
+);
+
+-- 6. Limpar e Recriar Políticas para VISITORS
+DROP POLICY IF EXISTS "Permitir leitura para usuários autenticados" ON public.visitors;
+DROP POLICY IF EXISTS "Permitir inserção para usuários autenticados" ON public.visitors;
+DROP POLICY IF EXISTS "Permitir deleção para quem criou ou master admin" ON public.visitors;
+DROP POLICY IF EXISTS "Permitir atualização para quem criou ou master admin" ON public.visitors;
+
+CREATE POLICY "Ver todos visitantes" ON public.visitors FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Cadastrar visitante" ON public.visitors FOR INSERT TO authenticated WITH CHECK (auth.uid() = created_by);
+CREATE POLICY "Deletar / Editar permissão master" ON public.visitors FOR ALL TO authenticated USING (
+  auth.uid() = created_by OR auth.jwt() ->> 'email' = 'adminnovo@gmail.com'
+) WITH CHECK (
+  auth.uid() = created_by OR auth.jwt() ->> 'email' = 'adminnovo@gmail.com'
+);

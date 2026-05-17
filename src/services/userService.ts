@@ -20,7 +20,7 @@ export const userService = {
       console.error('Error fetching profiles:', error);
       throw error;
     }
-    return data as UserProfile[];
+    return (data || []) as UserProfile[];
   },
 
   async upsertProfile(profile: UserProfile) {

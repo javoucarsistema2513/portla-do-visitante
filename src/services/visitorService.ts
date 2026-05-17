@@ -44,14 +44,12 @@ export const visitorService = {
         .single();
       
       if (error) {
-        console.error('Supabase Insert Detailed Error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
+        console.error('Supabase Insert Detailed Error:', error);
         throw error;
       }
+      
+      if (!data) throw new Error('No data returned from Suprabase insert');
+
       return {
         id: data.id,
         name: data.name,
@@ -85,7 +83,7 @@ export const visitorService = {
       if (error) throw error;
       
       // Map Supabase fields to our Visitor interface if needed
-      return data.map(v => ({
+      return (data || []).map(v => ({
         id: v.id,
         name: v.name,
         phone: v.phone,
@@ -146,6 +144,9 @@ export const visitorService = {
         .single();
 
       if (error) throw error;
+      
+      if (!data) throw new Error('No data returned from Supabase update');
+
       return {
         data: {
           id: data.id,
